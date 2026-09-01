@@ -1,0 +1,11 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "wc-page-core": ["../wc-page-core/dist/index.d.ts"],
+            "wc-utils": ["../wc-utils/dist/index.d.ts"]
+        },
+        "skipLibCheck": true
+    }
+}
