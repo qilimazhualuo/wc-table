@@ -3,8 +3,8 @@ import { computed, getCurrentInstance, ref, onMounted, onUnmounted, provide, nex
 import { message } from 'antdv-next'
 import { createGuid } from 'wc-utils'
 import { treeDataMake } from 'wc-utils'
-import { PAGE_SIZE_OPTIONS, formatTotalText } from 'wc-page-core'
-import type { PageField } from 'wc-page-core'
+import { PAGE_SIZE_OPTIONS, formatTotalText } from 'wc-core'
+import type { PageField } from 'wc-core'
 
 const props = defineProps({
     tableBtn: {
@@ -371,7 +371,7 @@ defineExpose({
 </script>
 
 <template>
-    <div ref="tableContent" class="wc-page-table-content">
+    <div ref="tableContent" class="wc-table-content">
         <a-table
             :scroll="tableScroll"
             :columns="columns"
@@ -415,7 +415,7 @@ defineExpose({
 <style lang="less" scoped>
 @import './styles/variables.less';
 
-.wc-page-table-content {
+.wc-table-content {
     height: 2px;
     flex: 1 1 auto;
     display: flex;

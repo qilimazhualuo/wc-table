@@ -6,15 +6,15 @@ import type {
     PageTableFilter,
     PageTableLoadData,
     PageTableRow,
-} from 'wc-page-core'
-import type { PageField } from 'wc-page-core'
-import { isShowInTable } from 'wc-page-core'
+} from 'wc-core'
+import type { PageField } from 'wc-core'
+import { isShowInTable } from 'wc-core'
 import {
     buildTableFilters,
     getDatePickerConfig,
     isSearchEnabled,
     resolveDatePrecision,
-} from 'wc-page-core'
+} from 'wc-core'
 
 const props = withDefaults(defineProps<{
     tableName?: string | null
