@@ -44,8 +44,8 @@ let resizeObserver: ResizeObserver | undefined
 const searchFields = computed(() => fields.value.filter((fieldItem) => isSearchEnabled(fieldItem)))
 
 const booleanSearchOptions = [
-    { label: '?', value: true },
-    { label: '?', value: false },
+    { label: '是', value: true },
+    { label: '否', value: false },
 ]
 
 const tableColumns = computed(() => {
@@ -73,7 +73,7 @@ const tableColumns = computed(() => {
         ...dataColumns,
         {
             key: 'action',
-            title: '??',
+            title: '操作',
             width: 88,
             align: 'center' as const,
             fixed: 'right' as const,
@@ -156,7 +156,7 @@ const loadRows = async () => {
     } catch (error) {
         rows.value = []
         total.value = 0
-        message.error(error instanceof Error ? error.message : '??????')
+        message.error(error instanceof Error ? error.message : '加载表格数据失败')
     } finally {
         loading.value = false
         await nextTick()
@@ -247,14 +247,14 @@ defineExpose({
                         v-if="fieldItem.searchMode === 'text'"
                         :value="(searchValues[fieldItem.field] as string) || ''"
                         allow-clear
-                        placeholder="????"
+                        placeholder="请输入"
                         @update:value="(value) => { searchValues[fieldItem.field] = value }"
                     />
                     <a-input-number
                         v-else-if="fieldItem.searchMode === 'number'"
                         :value="searchValues[fieldItem.field] as number | null"
                         allow-clear
-                        placeholder="????"
+                        placeholder="请输入"
                         style="width: 100%"
                         @update:value="(value) => { searchValues[fieldItem.field] = value }"
                     />
@@ -265,7 +265,7 @@ defineExpose({
                         <a-input-number
                             :value="(Array.isArray(searchValues[fieldItem.field]) ? searchValues[fieldItem.field][0] : null) as number | null"
                             allow-clear
-                            placeholder="??"
+                            placeholder="最小值"
                             style="width: 100%"
                             @update:value="(value) => setRangeValue(fieldItem.field, 0, value)"
                         />
@@ -273,7 +273,7 @@ defineExpose({
                         <a-input-number
                             :value="(Array.isArray(searchValues[fieldItem.field]) ? searchValues[fieldItem.field][1] : null) as number | null"
                             allow-clear
-                            placeholder="??"
+                            placeholder="最大值"
                             style="width: 100%"
                             @update:value="(value) => setRangeValue(fieldItem.field, 1, value)"
                         />
@@ -296,7 +296,7 @@ defineExpose({
                         :options="fieldItem.options || []"
                         allow-clear
                         show-search
-                        placeholder="???"
+                        placeholder="请选择"
                         style="width: 100%"
                         @update:value="(value) => { searchValues[fieldItem.field] = value }"
                     />
@@ -307,7 +307,7 @@ defineExpose({
                         allow-clear
                         show-search
                         mode="multiple"
-                        placeholder="???"
+                        placeholder="请选择"
                         style="width: 100%"
                         @update:value="(value) => { searchValues[fieldItem.field] = value }"
                     />
@@ -316,15 +316,15 @@ defineExpose({
                         :value="searchValues[fieldItem.field]"
                         :options="booleanSearchOptions"
                         allow-clear
-                        placeholder="???"
+                        placeholder="请选择"
                         style="width: 100%"
                         @update:value="(value) => { searchValues[fieldItem.field] = value }"
                     />
                 </div>
             </div>
             <div class="wc-page-schema-table__search-actions">
-                <a-button type="primary" @click="handleSearch">??</a-button>
-                <a-button @click="handleResetSearch">??</a-button>
+                <a-button type="primary" @click="handleSearch">查询</a-button>
+                <a-button @click="handleResetSearch">重置</a-button>
             </div>
         </div>
         <div ref="tableContentRef" class="wc-page-schema-table__body">
@@ -344,7 +344,7 @@ defineExpose({
                             size="small"
                             @click="emit('edit', record.id, record)"
                         >
-                            ??
+                            编辑
                         </a-button>
                     </template>
                     <template v-else>
@@ -352,7 +352,7 @@ defineExpose({
                     </template>
                 </template>
                 <template #emptyText>
-                    <a-empty :description="tableName ? '????' : '????????'" />
+                    <a-empty :description="tableName ? '暂无数据' : '请选择左侧数据表'" />
                 </template>
             </a-table>
             <a-pagination
@@ -361,7 +361,7 @@ defineExpose({
                 :total="total"
                 show-size-changer
                 show-quick-jumper
-                :show-total="(count: number) => `? ${count} ?`"
+                :show-total="(count: number) => `共 ${count} 条`"
                 @change="handlePageChange"
             />
         </div>
