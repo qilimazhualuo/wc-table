@@ -27,6 +27,8 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
     edit: [featureId: string, record: PageTableRow]
+    delete: [featureId: string, record: PageTableRow]
+    create: []
 }>()
 
 const tableContentRef = ref<HTMLElement | null>(null)
@@ -74,7 +76,7 @@ const tableColumns = computed(() => {
         {
             key: 'action',
             title: '操作',
-            width: 88,
+            width: 140,
             align: 'center' as const,
             fixed: 'right' as const,
         },
@@ -248,7 +250,7 @@ defineExpose({
                         :value="(searchValues[fieldItem.field] as string) || ''"
                         allow-clear
                         placeholder="请输入"
-                        @update:value="(value) => { searchValues[fieldItem.field] = value }"
+                        @update:value="(value: string | null) => { searchValues[fieldItem.field] = value || null }"
                     />
                     <a-input-number
                         v-else-if="fieldItem.searchMode === 'number'"
@@ -256,7 +258,7 @@ defineExpose({
                         allow-clear
                         placeholder="请输入"
                         style="width: 100%"
-                        @update:value="(value) => { searchValues[fieldItem.field] = value }"
+                        @update:value="(value: number | null) => { searchValues[fieldItem.field] = value || null }"
                     />
                     <div
                         v-else-if="fieldItem.searchMode === 'numberRange'"
@@ -267,7 +269,7 @@ defineExpose({
                             allow-clear
                             placeholder="最小值"
                             style="width: 100%"
-                            @update:value="(value) => setRangeValue(fieldItem.field, 0, value)"
+                            @update:value="(value: number | null) => setRangeValue(fieldItem.field, 0, value)"
                         />
                         <span class="wc-page-schema-table__search-sep">~</span>
                         <a-input-number
@@ -275,20 +277,20 @@ defineExpose({
                             allow-clear
                             placeholder="最大值"
                             style="width: 100%"
-                            @update:value="(value) => setRangeValue(fieldItem.field, 1, value)"
+                            @update:value="(value: number | null) => setRangeValue(fieldItem.field, 1, value)"
                         />
                     </div>
                     <a-date-picker
                         v-else-if="fieldItem.searchMode === 'date' || fieldItem.searchMode === 'datetime'"
                         :value="(searchValues[fieldItem.field] as string) || undefined"
                         v-bind="datePickerProps(fieldItem)"
-                        @update:value="(value) => { searchValues[fieldItem.field] = value || null }"
+                        @update:value="(value: string | null) => { searchValues[fieldItem.field] = value || null }"
                     />
                     <a-range-picker
                         v-else-if="fieldItem.searchMode === 'dateRange' || fieldItem.searchMode === 'datetimeRange'"
                         :value="(searchValues[fieldItem.field] as [string, string] | undefined)"
                         v-bind="datePickerProps(fieldItem)"
-                        @update:value="(value) => { searchValues[fieldItem.field] = value || null }"
+                        @update:value="(value: [string, string] | null) => { searchValues[fieldItem.field] = value || null }"
                     />
                     <a-select
                         v-else-if="fieldItem.searchMode === 'select'"
@@ -298,7 +300,7 @@ defineExpose({
                         show-search
                         placeholder="请选择"
                         style="width: 100%"
-                        @update:value="(value) => { searchValues[fieldItem.field] = value }"
+                        @update:value="(value: string | null) => { searchValues[fieldItem.field] = value || null }"
                     />
                     <a-select
                         v-else-if="fieldItem.searchMode === 'selectMultiple'"
@@ -309,7 +311,7 @@ defineExpose({
                         mode="multiple"
                         placeholder="请选择"
                         style="width: 100%"
-                        @update:value="(value) => { searchValues[fieldItem.field] = value }"
+                        @update:value="(value: unknown[] | null) => { searchValues[fieldItem.field] = value || null }"
                     />
                     <a-select
                         v-else-if="fieldItem.searchMode === 'boolean'"
@@ -318,13 +320,14 @@ defineExpose({
                         allow-clear
                         placeholder="请选择"
                         style="width: 100%"
-                        @update:value="(value) => { searchValues[fieldItem.field] = value }"
+                        @update:value="(value: boolean | null) => { searchValues[fieldItem.field] = value || null }"
                     />
                 </div>
             </div>
             <div class="wc-page-schema-table__search-actions">
                 <a-button type="primary" @click="handleSearch">查询</a-button>
                 <a-button @click="handleResetSearch">重置</a-button>
+                <a-button type="primary" @click="emit('create')">新增</a-button>
             </div>
         </div>
         <div ref="tableContentRef" class="wc-page-schema-table__body">
@@ -339,13 +342,29 @@ defineExpose({
             >
                 <template #bodyCell="{ column, record }">
                     <template v-if="column.key === 'action'">
-                        <a-button
-                            type="link"
-                            size="small"
-                            @click="emit('edit', record.id, record)"
-                        >
-                            编辑
-                        </a-button>
+                        <a-space>
+                            <a-button
+                                type="link"
+                                size="small"
+                                @click="emit('edit', record.id, record)"
+                            >
+                                编辑
+                            </a-button>
+                            <a-popconfirm
+                                title="确定删除这条数据？"
+                                ok-text="确定"
+                                cancel-text="取消"
+                                @confirm="emit('delete', record.id, record)"
+                            >
+                                <a-button
+                                    type="link"
+                                    size="small"
+                                    danger
+                                >
+                                    删除
+                                </a-button>
+                            </a-popconfirm>
+                        </a-space>
                     </template>
                     <template v-else>
                         {{ formatCellValue(record.attributes?.[column.key as string]) }}
