@@ -49,8 +49,8 @@ let resizeObserver: ResizeObserver | undefined
 const searchFields = computed(() => fields.value.filter((fieldItem) => isSearchEnabled(fieldItem)))
 
 const booleanSearchOptions = [
-    { label: '?', value: true },
-    { label: '?', value: false },
+    { label: '是', value: true },
+    { label: '否', value: false },
 ]
 
 const formatCellValue = (rawValue: unknown) => {
@@ -108,14 +108,14 @@ const searchInputRenderers: Record<string, (fieldItem: PageField) => VNode> = {
         <Input
             value={(searchValues[fieldItem.field] as string) || ''}
             allowClear
-            placeholder="???"
+            placeholder="请输入"
             onUpdate:value={(value: string | null) => { searchValues[fieldItem.field] = value || null }}
         />
     ),
     number: (fieldItem) => (
         <InputNumber
             value={(searchValues[fieldItem.field] as number | null) ?? undefined}
-            placeholder="???"
+            placeholder="请输入"
             style="width: 100%"
             onUpdate:value={(value: number | null) => { searchValues[fieldItem.field] = value ?? null }}
         />
@@ -124,7 +124,7 @@ const searchInputRenderers: Record<string, (fieldItem: PageField) => VNode> = {
         <SpaceCompact class="wc-page-schema-table__search-range">
             <InputNumber
                 value={rangeValueAt(fieldItem.field, 0) ?? undefined}
-                placeholder="???"
+                placeholder="最小值"
                 onUpdate:value={(value: number | null) => setRangeValue(fieldItem.field, 0, value)}
             />
             <Input
@@ -134,7 +134,7 @@ const searchInputRenderers: Record<string, (fieldItem: PageField) => VNode> = {
             />
             <InputNumber
                 value={rangeValueAt(fieldItem.field, 1) ?? undefined}
-                placeholder="???"
+                placeholder="最大值"
                 onUpdate:value={(value: number | null) => setRangeValue(fieldItem.field, 1, value)}
             />
         </SpaceCompact>
@@ -159,7 +159,7 @@ const searchInputRenderers: Record<string, (fieldItem: PageField) => VNode> = {
             options={(fieldItem.options || []) as Array<{ label: string; value: string | number }>}
             allowClear
             showSearch
-            placeholder="???"
+            placeholder="请选择"
             style="width: 100%"
             onUpdate:value={(value: unknown) => { searchValues[fieldItem.field] = value ?? null }}
         />
@@ -171,7 +171,7 @@ const searchInputRenderers: Record<string, (fieldItem: PageField) => VNode> = {
             allowClear
             showSearch
             mode="multiple"
-            placeholder="???"
+            placeholder="请选择"
             style="width: 100%"
             onUpdate:value={(value: unknown) => { searchValues[fieldItem.field] = (value as unknown[] | null) || null }}
         />
@@ -181,7 +181,7 @@ const searchInputRenderers: Record<string, (fieldItem: PageField) => VNode> = {
             value={searchValues[fieldItem.field] as boolean | null}
             options={booleanSearchOptions as unknown as Array<{ label: string; value: string | number }>}
             allowClear
-            placeholder="???"
+            placeholder="请选择"
             style="width: 100%"
             onUpdate:value={(value: unknown) => { searchValues[fieldItem.field] = value ?? null }}
         />
@@ -234,7 +234,7 @@ const tableColumns = computed(() => {
         ...dataColumns,
         {
             key: 'action',
-            title: '??',
+            title: '操作',
             width: 140,
             align: 'center' as const,
             fixed: 'right' as const,
@@ -245,12 +245,12 @@ const tableColumns = computed(() => {
                         size="small"
                         onClick={() => emit('edit', record.id, record)}
                     >
-                        ??
+                        编辑
                     </Button>
                     <Popconfirm
-                        title="?????????"
-                        okText="??"
-                        cancelText="??"
+                        title="确定删除这条数据？"
+                        okText="确定"
+                        cancelText="取消"
                         onConfirm={() => emit('delete', record.id, record)}
                     >
                         <Button
@@ -258,7 +258,7 @@ const tableColumns = computed(() => {
                             size="small"
                             danger
                         >
-                            ??
+                            删除
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -311,7 +311,7 @@ const loadRows = async () => {
     } catch (error) {
         rows.value = []
         total.value = 0
-        message.error(error instanceof Error ? error.message : '????????')
+        message.error(error instanceof Error ? error.message : '加载表格数据失败')
     } finally {
         loading.value = false
         await nextTick()
@@ -394,9 +394,9 @@ defineExpose({
                 </div>
             </div>
             <div class="wc-page-schema-table__search-actions">
-                <a-button type="primary" @click="handleSearch">??</a-button>
-                <a-button @click="handleResetSearch">??</a-button>
-                <a-button type="primary" @click="emit('create')">??</a-button>
+                <a-button type="primary" @click="handleSearch">查询</a-button>
+                <a-button @click="handleResetSearch">重置</a-button>
+                <a-button type="primary" @click="emit('create')">新增</a-button>
             </div>
         </div>
         <div ref="tableContentRef" class="wc-page-schema-table__body">
@@ -410,7 +410,7 @@ defineExpose({
                 size="middle"
             >
                 <template #emptyText>
-                    <a-empty :description="tableName ? '????' : '????????'" />
+                    <a-empty :description="tableName ? '暂无数据' : '请选择左侧数据表'" />
                 </template>
             </a-table>
             <a-pagination
@@ -419,7 +419,7 @@ defineExpose({
                 :total="total"
                 show-size-changer
                 show-quick-jumper
-                :show-total="(count: number) => `? ${count} ?`"
+                :show-total="(count: number) => `共 ${count} 条`"
                 @change="handlePageChange"
             />
         </div>
