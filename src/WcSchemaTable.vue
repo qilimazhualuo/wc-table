@@ -1,6 +1,6 @@
 <script setup lang="tsx">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import type { FunctionalComponent } from 'vue'
+import type { FunctionalComponent, VNode } from 'vue'
 import { Button, DatePicker, Input, InputNumber, Popconfirm, Select, Space, SpaceCompact, message } from 'antdv-next'
 import type {
     DateSearchPrecision,
@@ -49,8 +49,8 @@ let resizeObserver: ResizeObserver | undefined
 const searchFields = computed(() => fields.value.filter((fieldItem) => isSearchEnabled(fieldItem)))
 
 const booleanSearchOptions = [
-    { label: '是', value: true },
-    { label: '否', value: false },
+    { label: '?', value: true },
+    { label: '?', value: false },
 ]
 
 const formatCellValue = (rawValue: unknown) => {
@@ -103,28 +103,28 @@ const rangeValueAt = (fieldName: string, rangeIndex: 0 | 1): number | null => {
 
 type SearchInputProps = { fieldItem: PageField }
 
-const searchInputComponents: Record<string, FunctionalComponent<SearchInputProps>> = {
-    text: ({ fieldItem }) => (
+const searchInputRenderers: Record<string, (fieldItem: PageField) => VNode> = {
+    text: (fieldItem) => (
         <Input
             value={(searchValues[fieldItem.field] as string) || ''}
             allowClear
-            placeholder="请输入"
+            placeholder="???"
             onUpdate:value={(value: string | null) => { searchValues[fieldItem.field] = value || null }}
         />
     ),
-    number: ({ fieldItem }) => (
+    number: (fieldItem) => (
         <InputNumber
             value={(searchValues[fieldItem.field] as number | null) ?? undefined}
-            placeholder="请输入"
+            placeholder="???"
             style="width: 100%"
             onUpdate:value={(value: number | null) => { searchValues[fieldItem.field] = value ?? null }}
         />
     ),
-    numberRange: ({ fieldItem }) => (
+    numberRange: (fieldItem) => (
         <SpaceCompact class="wc-page-schema-table__search-range">
             <InputNumber
                 value={rangeValueAt(fieldItem.field, 0) ?? undefined}
-                placeholder="最小值"
+                placeholder="???"
                 onUpdate:value={(value: number | null) => setRangeValue(fieldItem.field, 0, value)}
             />
             <Input
@@ -134,69 +134,74 @@ const searchInputComponents: Record<string, FunctionalComponent<SearchInputProps
             />
             <InputNumber
                 value={rangeValueAt(fieldItem.field, 1) ?? undefined}
-                placeholder="最大值"
+                placeholder="???"
                 onUpdate:value={(value: number | null) => setRangeValue(fieldItem.field, 1, value)}
             />
         </SpaceCompact>
     ),
-    date: ({ fieldItem }) => (
+    date: (fieldItem) => (
         <DatePicker
             value={(searchValues[fieldItem.field] as string) || undefined}
             {...datePickerProps(fieldItem)}
             onUpdate:value={(value: unknown) => { searchValues[fieldItem.field] = (value as string | null) || null }}
         />
     ),
-    dateRange: ({ fieldItem }) => (
+    dateRange: (fieldItem) => (
         <RangePicker
             value={(searchValues[fieldItem.field] as [string, string]) || undefined}
             {...datePickerProps(fieldItem)}
             onUpdate:value={(value: unknown) => { searchValues[fieldItem.field] = (value as [string, string] | null) || null }}
         />
     ),
-    select: ({ fieldItem }) => (
+    select: (fieldItem) => (
         <Select
             value={searchValues[fieldItem.field] as string | null}
             options={(fieldItem.options || []) as Array<{ label: string; value: string | number }>}
             allowClear
             showSearch
-            placeholder="请选择"
+            placeholder="???"
             style="width: 100%"
             onUpdate:value={(value: unknown) => { searchValues[fieldItem.field] = value ?? null }}
         />
     ),
-    selectMultiple: ({ fieldItem }) => (
+    selectMultiple: (fieldItem) => (
         <Select
             value={(searchValues[fieldItem.field] as unknown[]) || []}
             options={(fieldItem.options || []) as Array<{ label: string; value: string | number }>}
             allowClear
             showSearch
             mode="multiple"
-            placeholder="请选择"
+            placeholder="???"
             style="width: 100%"
             onUpdate:value={(value: unknown) => { searchValues[fieldItem.field] = (value as unknown[] | null) || null }}
         />
     ),
-    boolean: ({ fieldItem }) => (
+    boolean: (fieldItem) => (
         <Select
             value={searchValues[fieldItem.field] as boolean | null}
             options={booleanSearchOptions as unknown as Array<{ label: string; value: string | number }>}
             allowClear
-            placeholder="请选择"
+            placeholder="???"
             style="width: 100%"
             onUpdate:value={(value: unknown) => { searchValues[fieldItem.field] = value ?? null }}
         />
     ),
 }
 
-const resolveSearchInputComponent = (fieldItem: PageField) => {
+const resolveSearchRendererKey = (fieldItem: PageField) => {
     const searchMode = fieldItem.searchMode || 'none'
-    const rendererKey = searchMode === 'datetime'
+    return searchMode === 'datetime'
         ? 'date'
         : searchMode === 'datetimeRange'
             ? 'dateRange'
             : searchMode
-    return searchInputComponents[rendererKey]
 }
+
+const SearchInputRenderer: FunctionalComponent<SearchInputProps> = ({ fieldItem }) => {
+    const renderer = searchInputRenderers[resolveSearchRendererKey(fieldItem)]
+    return renderer ? renderer(fieldItem) : null
+}
+SearchInputRenderer.props = ['fieldItem']
 
 type TableCellRenderContext = { record: PageTableRow }
 
@@ -229,7 +234,7 @@ const tableColumns = computed(() => {
         ...dataColumns,
         {
             key: 'action',
-            title: '操作',
+            title: '??',
             width: 140,
             align: 'center' as const,
             fixed: 'right' as const,
@@ -240,12 +245,12 @@ const tableColumns = computed(() => {
                         size="small"
                         onClick={() => emit('edit', record.id, record)}
                     >
-                        编辑
+                        ??
                     </Button>
                     <Popconfirm
-                        title="确定删除这条数据？"
-                        okText="确定"
-                        cancelText="取消"
+                        title="?????????"
+                        okText="??"
+                        cancelText="??"
                         onConfirm={() => emit('delete', record.id, record)}
                     >
                         <Button
@@ -253,7 +258,7 @@ const tableColumns = computed(() => {
                             size="small"
                             danger
                         >
-                            删除
+                            ??
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -306,7 +311,7 @@ const loadRows = async () => {
     } catch (error) {
         rows.value = []
         total.value = 0
-        message.error(error instanceof Error ? error.message : '加载表格数据失败')
+        message.error(error instanceof Error ? error.message : '????????')
     } finally {
         loading.value = false
         await nextTick()
@@ -385,16 +390,13 @@ defineExpose({
                     <span class="wc-page-schema-table__search-label">
                         {{ fieldItem.title || fieldItem.field }}
                     </span>
-                    <component
-                        :is="resolveSearchInputComponent(fieldItem)"
-                        :field-item="fieldItem"
-                    />
+                    <SearchInputRenderer :field-item="fieldItem" />
                 </div>
             </div>
             <div class="wc-page-schema-table__search-actions">
-                <a-button type="primary" @click="handleSearch">查询</a-button>
-                <a-button @click="handleResetSearch">重置</a-button>
-                <a-button type="primary" @click="emit('create')">新增</a-button>
+                <a-button type="primary" @click="handleSearch">??</a-button>
+                <a-button @click="handleResetSearch">??</a-button>
+                <a-button type="primary" @click="emit('create')">??</a-button>
             </div>
         </div>
         <div ref="tableContentRef" class="wc-page-schema-table__body">
@@ -408,7 +410,7 @@ defineExpose({
                 size="middle"
             >
                 <template #emptyText>
-                    <a-empty :description="tableName ? '暂无数据' : '请选择左侧数据表'" />
+                    <a-empty :description="tableName ? '????' : '????????'" />
                 </template>
             </a-table>
             <a-pagination
@@ -417,7 +419,7 @@ defineExpose({
                 :total="total"
                 show-size-changer
                 show-quick-jumper
-                :show-total="(count: number) => `共 ${count} 条`"
+                :show-total="(count: number) => `? ${count} ?`"
                 @change="handlePageChange"
             />
         </div>
