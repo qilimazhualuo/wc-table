@@ -193,6 +193,15 @@ const setRangeValue = (fieldName: string, rangeIndex: 0 | 1, nextValue: unknown)
     searchValues[fieldName] = currentRange
 }
 
+const rangeValueAt = (fieldName: string, rangeIndex: 0 | 1): number | null => {
+    const rawValue = searchValues[fieldName]
+    if (!Array.isArray(rawValue)) {
+        return null
+    }
+    const item = rawValue[rangeIndex]
+    return typeof item === 'number' ? item : null
+}
+
 watch(
     () => props.tableName,
     () => {
@@ -265,7 +274,7 @@ defineExpose({
                         class="wc-page-schema-table__search-range"
                     >
                         <a-input-number
-                            :value="(Array.isArray(searchValues[fieldItem.field]) ? searchValues[fieldItem.field][0] : null) as number | null"
+                            :value="rangeValueAt(fieldItem.field, 0)"
                             allow-clear
                             placeholder="最小值"
                             style="width: 100%"
@@ -273,7 +282,7 @@ defineExpose({
                         />
                         <span class="wc-page-schema-table__search-sep">~</span>
                         <a-input-number
-                            :value="(Array.isArray(searchValues[fieldItem.field]) ? searchValues[fieldItem.field][1] : null) as number | null"
+                            :value="rangeValueAt(fieldItem.field, 1)"
                             allow-clear
                             placeholder="最大值"
                             style="width: 100%"
