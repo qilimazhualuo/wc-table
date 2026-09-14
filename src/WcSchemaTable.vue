@@ -1,7 +1,7 @@
 <script setup lang="tsx">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import type { FunctionalComponent } from 'vue'
-import { Button, DatePicker, Input, InputNumber, Popconfirm, Select, Space, message } from 'antdv-next'
+import { Button, DatePicker, Input, InputNumber, Popconfirm, Select, Space, SpaceCompact, message } from 'antdv-next'
 import type {
     DateSearchPrecision,
     PageTableFilter,
@@ -121,21 +121,23 @@ const searchInputComponents: Record<string, FunctionalComponent<SearchInputProps
         />
     ),
     numberRange: ({ fieldItem }) => (
-        <div class="wc-page-schema-table__search-range">
+        <SpaceCompact class="wc-page-schema-table__search-range">
             <InputNumber
                 value={rangeValueAt(fieldItem.field, 0) ?? undefined}
                 placeholder="最小值"
-                style="width: 100%"
                 onUpdate:value={(value: number | null) => setRangeValue(fieldItem.field, 0, value)}
             />
-            <span class="wc-page-schema-table__search-sep">~</span>
+            <Input
+                class="wc-page-schema-table__search-sep"
+                placeholder="~"
+                disabled
+            />
             <InputNumber
                 value={rangeValueAt(fieldItem.field, 1) ?? undefined}
                 placeholder="最大值"
-                style="width: 100%"
                 onUpdate:value={(value: number | null) => setRangeValue(fieldItem.field, 1, value)}
             />
-        </div>
+        </SpaceCompact>
     ),
     date: ({ fieldItem }) => (
         <DatePicker
@@ -484,16 +486,17 @@ defineExpose({
     }
 
     &__search-range {
-        display: flex;
-        align-items: center;
-        gap: 6px;
         flex: 1;
         min-width: 0;
     }
 
     &__search-sep {
-        color: var(--theme-color-text-secondary, rgba(0, 0, 0, 0.45));
+        width: 36px;
         flex-shrink: 0;
+        text-align: center;
+        pointer-events: none;
+        background: transparent;
+        color: var(--theme-color-text-secondary, rgba(0, 0, 0, 0.45));
     }
 
     &__search-actions {
