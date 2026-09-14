@@ -1,6 +1,7 @@
-<script setup lang="ts">
+<script setup lang="tsx">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { message } from 'antdv-next'
+import type { FunctionalComponent } from 'vue'
+import { Button, DatePicker, Input, InputNumber, Popconfirm, Select, Space, message } from 'antdv-next'
 import type {
     DateSearchPrecision,
     PageTableFilter,
@@ -15,6 +16,8 @@ import {
     isSearchEnabled,
     resolveDatePrecision,
 } from 'wc-core'
+
+const { RangePicker } = DatePicker
 
 const props = withDefaults(defineProps<{
     tableName?: string | null
@@ -50,46 +53,6 @@ const booleanSearchOptions = [
     { label: '否', value: false },
 ]
 
-const tableColumns = computed(() => {
-    const visibleFields = fields.value.filter((fieldItem) => isShowInTable(fieldItem))
-    const sourceFields = visibleFields.length
-        ? visibleFields
-        : fields.value.filter((fieldItem) => fieldItem.lockReason !== 'geometry' && fieldItem.inputType !== 'geom')
-    const dataColumns = sourceFields.map((fieldItem) => ({
-        key: fieldItem.field,
-        title: fieldItem.title || fieldItem.field,
-        ellipsis: true,
-        width: 160,
-    }))
-    if (!dataColumns.length && rows.value[0]) {
-        Object.keys(rows.value[0].attributes || {}).forEach((fieldName) => {
-            dataColumns.push({
-                key: fieldName,
-                title: fieldName,
-                ellipsis: true,
-                width: 160,
-            })
-        })
-    }
-    return [
-        ...dataColumns,
-        {
-            key: 'action',
-            title: '操作',
-            width: 140,
-            align: 'center' as const,
-            fixed: 'right' as const,
-        },
-    ]
-})
-
-const tableScroll = computed(() => {
-    if (!bodyScrollHeight.value || Number.isNaN(bodyScrollHeight.value) || bodyScrollHeight.value <= 0) {
-        return { x: 'max-content' }
-    }
-    return { x: 'max-content', y: bodyScrollHeight.value }
-})
-
 const formatCellValue = (rawValue: unknown) => {
     if (rawValue == null || rawValue === '') {
         return '-'
@@ -120,6 +83,189 @@ const clearSearchValues = () => {
         delete searchValues[fieldName]
     })
 }
+
+const setRangeValue = (fieldName: string, rangeIndex: 0 | 1, nextValue: unknown) => {
+    const currentRange = Array.isArray(searchValues[fieldName])
+        ? [...(searchValues[fieldName] as unknown[])]
+        : [null, null]
+    currentRange[rangeIndex] = nextValue ?? null
+    searchValues[fieldName] = currentRange
+}
+
+const rangeValueAt = (fieldName: string, rangeIndex: 0 | 1): number | null => {
+    const rawValue = searchValues[fieldName]
+    if (!Array.isArray(rawValue)) {
+        return null
+    }
+    const item = rawValue[rangeIndex]
+    return typeof item === 'number' ? item : null
+}
+
+type SearchInputProps = { fieldItem: PageField }
+
+const searchInputComponents: Record<string, FunctionalComponent<SearchInputProps>> = {
+    text: ({ fieldItem }) => (
+        <Input
+            value={(searchValues[fieldItem.field] as string) || ''}
+            allowClear
+            placeholder="请输入"
+            onUpdate:value={(value: string | null) => { searchValues[fieldItem.field] = value || null }}
+        />
+    ),
+    number: ({ fieldItem }) => (
+        <InputNumber
+            value={(searchValues[fieldItem.field] as number | null) ?? undefined}
+            placeholder="请输入"
+            style="width: 100%"
+            onUpdate:value={(value: number | null) => { searchValues[fieldItem.field] = value ?? null }}
+        />
+    ),
+    numberRange: ({ fieldItem }) => (
+        <div class="wc-page-schema-table__search-range">
+            <InputNumber
+                value={rangeValueAt(fieldItem.field, 0) ?? undefined}
+                placeholder="最小值"
+                style="width: 100%"
+                onUpdate:value={(value: number | null) => setRangeValue(fieldItem.field, 0, value)}
+            />
+            <span class="wc-page-schema-table__search-sep">~</span>
+            <InputNumber
+                value={rangeValueAt(fieldItem.field, 1) ?? undefined}
+                placeholder="最大值"
+                style="width: 100%"
+                onUpdate:value={(value: number | null) => setRangeValue(fieldItem.field, 1, value)}
+            />
+        </div>
+    ),
+    date: ({ fieldItem }) => (
+        <DatePicker
+            value={(searchValues[fieldItem.field] as string) || undefined}
+            {...datePickerProps(fieldItem)}
+            onUpdate:value={(value: unknown) => { searchValues[fieldItem.field] = (value as string | null) || null }}
+        />
+    ),
+    dateRange: ({ fieldItem }) => (
+        <RangePicker
+            value={(searchValues[fieldItem.field] as [string, string]) || undefined}
+            {...datePickerProps(fieldItem)}
+            onUpdate:value={(value: unknown) => { searchValues[fieldItem.field] = (value as [string, string] | null) || null }}
+        />
+    ),
+    select: ({ fieldItem }) => (
+        <Select
+            value={searchValues[fieldItem.field] as string | null}
+            options={(fieldItem.options || []) as Array<{ label: string; value: string | number }>}
+            allowClear
+            showSearch
+            placeholder="请选择"
+            style="width: 100%"
+            onUpdate:value={(value: unknown) => { searchValues[fieldItem.field] = value ?? null }}
+        />
+    ),
+    selectMultiple: ({ fieldItem }) => (
+        <Select
+            value={(searchValues[fieldItem.field] as unknown[]) || []}
+            options={(fieldItem.options || []) as Array<{ label: string; value: string | number }>}
+            allowClear
+            showSearch
+            mode="multiple"
+            placeholder="请选择"
+            style="width: 100%"
+            onUpdate:value={(value: unknown) => { searchValues[fieldItem.field] = (value as unknown[] | null) || null }}
+        />
+    ),
+    boolean: ({ fieldItem }) => (
+        <Select
+            value={searchValues[fieldItem.field] as boolean | null}
+            options={booleanSearchOptions as unknown as Array<{ label: string; value: string | number }>}
+            allowClear
+            placeholder="请选择"
+            style="width: 100%"
+            onUpdate:value={(value: unknown) => { searchValues[fieldItem.field] = value ?? null }}
+        />
+    ),
+}
+
+const resolveSearchInputComponent = (fieldItem: PageField) => {
+    const searchMode = fieldItem.searchMode || 'none'
+    const rendererKey = searchMode === 'datetime'
+        ? 'date'
+        : searchMode === 'datetimeRange'
+            ? 'dateRange'
+            : searchMode
+    return searchInputComponents[rendererKey]
+}
+
+type TableCellRenderContext = { record: PageTableRow }
+
+const tableColumns = computed(() => {
+    const visibleFields = fields.value.filter((fieldItem) => isShowInTable(fieldItem))
+    const sourceFields = visibleFields.length
+        ? visibleFields
+        : fields.value.filter((fieldItem) => fieldItem.lockReason !== 'geometry' && fieldItem.inputType !== 'geom')
+    const dataColumns = sourceFields.map((fieldItem) => ({
+        key: fieldItem.field,
+        title: fieldItem.title || fieldItem.field,
+        ellipsis: true,
+        width: 160,
+        customRender: ({ record }: TableCellRenderContext) =>
+            formatCellValue(record.attributes?.[fieldItem.field]),
+    }))
+    if (!dataColumns.length && rows.value[0]) {
+        Object.keys(rows.value[0].attributes || {}).forEach((fieldName) => {
+            dataColumns.push({
+                key: fieldName,
+                title: fieldName,
+                ellipsis: true,
+                width: 160,
+                customRender: ({ record }: TableCellRenderContext) =>
+                    formatCellValue(record.attributes?.[fieldName]),
+            })
+        })
+    }
+    return [
+        ...dataColumns,
+        {
+            key: 'action',
+            title: '操作',
+            width: 140,
+            align: 'center' as const,
+            fixed: 'right' as const,
+            customRender: ({ record }: TableCellRenderContext) => (
+                <Space>
+                    <Button
+                        type="link"
+                        size="small"
+                        onClick={() => emit('edit', record.id, record)}
+                    >
+                        编辑
+                    </Button>
+                    <Popconfirm
+                        title="确定删除这条数据？"
+                        okText="确定"
+                        cancelText="取消"
+                        onConfirm={() => emit('delete', record.id, record)}
+                    >
+                        <Button
+                            type="link"
+                            size="small"
+                            danger
+                        >
+                            删除
+                        </Button>
+                    </Popconfirm>
+                </Space>
+            ),
+        },
+    ]
+})
+
+const tableScroll = computed(() => {
+    if (!bodyScrollHeight.value || Number.isNaN(bodyScrollHeight.value) || bodyScrollHeight.value <= 0) {
+        return { x: 'max-content' }
+    }
+    return { x: 'max-content', y: bodyScrollHeight.value }
+})
 
 const setTableHeight = () => {
     const tableContent = tableContentRef.value
@@ -185,23 +331,6 @@ const handlePageChange = (nextPage: number, nextPageSize: number) => {
     void loadRows()
 }
 
-const setRangeValue = (fieldName: string, rangeIndex: 0 | 1, nextValue: unknown) => {
-    const currentRange = Array.isArray(searchValues[fieldName])
-        ? [...(searchValues[fieldName] as unknown[])]
-        : [null, null]
-    currentRange[rangeIndex] = nextValue ?? null
-    searchValues[fieldName] = currentRange
-}
-
-const rangeValueAt = (fieldName: string, rangeIndex: 0 | 1): number | null => {
-    const rawValue = searchValues[fieldName]
-    if (!Array.isArray(rawValue)) {
-        return null
-    }
-    const item = rawValue[rangeIndex]
-    return typeof item === 'number' ? item : null
-}
-
 watch(
     () => props.tableName,
     () => {
@@ -254,82 +383,9 @@ defineExpose({
                     <span class="wc-page-schema-table__search-label">
                         {{ fieldItem.title || fieldItem.field }}
                     </span>
-                    <a-input
-                        v-if="fieldItem.searchMode === 'text'"
-                        :value="(searchValues[fieldItem.field] as string) || ''"
-                        allow-clear
-                        placeholder="请输入"
-                        @update:value="(value: string | null) => { searchValues[fieldItem.field] = value || null }"
-                    />
-                    <a-input-number
-                        v-else-if="fieldItem.searchMode === 'number'"
-                        :value="searchValues[fieldItem.field] as number | null"
-                        allow-clear
-                        placeholder="请输入"
-                        style="width: 100%"
-                        @update:value="(value: number | null) => { searchValues[fieldItem.field] = value || null }"
-                    />
-                    <div
-                        v-else-if="fieldItem.searchMode === 'numberRange'"
-                        class="wc-page-schema-table__search-range"
-                    >
-                        <a-input-number
-                            :value="rangeValueAt(fieldItem.field, 0)"
-                            allow-clear
-                            placeholder="最小值"
-                            style="width: 100%"
-                            @update:value="(value: number | null) => setRangeValue(fieldItem.field, 0, value)"
-                        />
-                        <span class="wc-page-schema-table__search-sep">~</span>
-                        <a-input-number
-                            :value="rangeValueAt(fieldItem.field, 1)"
-                            allow-clear
-                            placeholder="最大值"
-                            style="width: 100%"
-                            @update:value="(value: number | null) => setRangeValue(fieldItem.field, 1, value)"
-                        />
-                    </div>
-                    <a-date-picker
-                        v-else-if="fieldItem.searchMode === 'date' || fieldItem.searchMode === 'datetime'"
-                        :value="(searchValues[fieldItem.field] as string) || undefined"
-                        v-bind="datePickerProps(fieldItem)"
-                        @update:value="(value: string | null) => { searchValues[fieldItem.field] = value || null }"
-                    />
-                    <a-range-picker
-                        v-else-if="fieldItem.searchMode === 'dateRange' || fieldItem.searchMode === 'datetimeRange'"
-                        :value="(searchValues[fieldItem.field] as [string, string] | undefined)"
-                        v-bind="datePickerProps(fieldItem)"
-                        @update:value="(value: [string, string] | null) => { searchValues[fieldItem.field] = value || null }"
-                    />
-                    <a-select
-                        v-else-if="fieldItem.searchMode === 'select'"
-                        :value="searchValues[fieldItem.field]"
-                        :options="fieldItem.options || []"
-                        allow-clear
-                        show-search
-                        placeholder="请选择"
-                        style="width: 100%"
-                        @update:value="(value: string | null) => { searchValues[fieldItem.field] = value || null }"
-                    />
-                    <a-select
-                        v-else-if="fieldItem.searchMode === 'selectMultiple'"
-                        :value="(searchValues[fieldItem.field] as unknown[]) || []"
-                        :options="fieldItem.options || []"
-                        allow-clear
-                        show-search
-                        mode="multiple"
-                        placeholder="请选择"
-                        style="width: 100%"
-                        @update:value="(value: unknown[] | null) => { searchValues[fieldItem.field] = value || null }"
-                    />
-                    <a-select
-                        v-else-if="fieldItem.searchMode === 'boolean'"
-                        :value="searchValues[fieldItem.field]"
-                        :options="booleanSearchOptions"
-                        allow-clear
-                        placeholder="请选择"
-                        style="width: 100%"
-                        @update:value="(value: boolean | null) => { searchValues[fieldItem.field] = value || null }"
+                    <component
+                        :is="resolveSearchInputComponent(fieldItem)"
+                        :field-item="fieldItem"
                     />
                 </div>
             </div>
@@ -349,36 +405,6 @@ defineExpose({
                 row-key="id"
                 size="middle"
             >
-                <template #bodyCell="{ column, record }">
-                    <template v-if="column.key === 'action'">
-                        <a-space>
-                            <a-button
-                                type="link"
-                                size="small"
-                                @click="emit('edit', record.id, record)"
-                            >
-                                编辑
-                            </a-button>
-                            <a-popconfirm
-                                title="确定删除这条数据？"
-                                ok-text="确定"
-                                cancel-text="取消"
-                                @confirm="emit('delete', record.id, record)"
-                            >
-                                <a-button
-                                    type="link"
-                                    size="small"
-                                    danger
-                                >
-                                    删除
-                                </a-button>
-                            </a-popconfirm>
-                        </a-space>
-                    </template>
-                    <template v-else>
-                        {{ formatCellValue(record.attributes?.[column.key as string]) }}
-                    </template>
-                </template>
                 <template #emptyText>
                     <a-empty :description="tableName ? '暂无数据' : '请选择左侧数据表'" />
                 </template>
