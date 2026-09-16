@@ -45,6 +45,7 @@ const bodyScrollHeight = ref<number>()
 const searchValues = reactive<Record<string, unknown>>({})
 const appliedFilters = ref<PageTableFilter[]>([])
 let resizeObserver: ResizeObserver | undefined
+let loadRequestSeq = 0
 
 const searchFields = computed(() => fields.value.filter((fieldItem) => isSearchEnabled(fieldItem)))
 
@@ -203,8 +204,6 @@ const SearchInputRenderer: FunctionalComponent<SearchInputProps> = ({ fieldItem 
 }
 SearchInputRenderer.props = ['fieldItem']
 
-type TableCellRenderContext = { record: PageTableRow }
-
 const tableColumns = computed(() => {
     const visibleFields = fields.value.filter((fieldItem) => isShowInTable(fieldItem))
     const sourceFields = visibleFields.length
@@ -215,7 +214,8 @@ const tableColumns = computed(() => {
         title: fieldItem.title || fieldItem.field,
         ellipsis: true,
         width: 160,
-        customRender: ({ record }: TableCellRenderContext) =>
+        // antdv-next: render(value, record, index) — NOT customRender({ record })
+        render: (_value: unknown, record: PageTableRow) =>
             formatCellValue(record.attributes?.[fieldItem.field]),
     }))
     if (!dataColumns.length && rows.value[0]) {
@@ -225,7 +225,7 @@ const tableColumns = computed(() => {
                 title: fieldName,
                 ellipsis: true,
                 width: 160,
-                customRender: ({ record }: TableCellRenderContext) =>
+                render: (_value: unknown, record: PageTableRow) =>
                     formatCellValue(record.attributes?.[fieldName]),
             })
         })
@@ -238,7 +238,7 @@ const tableColumns = computed(() => {
             width: 140,
             align: 'center' as const,
             fixed: 'right' as const,
-            customRender: ({ record }: TableCellRenderContext) => (
+            render: (_value: unknown, record: PageTableRow) => (
                 <Space>
                     <Button
                         type="link"
@@ -289,30 +289,48 @@ const setTableHeight = () => {
 }
 
 const loadRows = async () => {
+    const requestSeq = ++loadRequestSeq
+    const isLatestRequest = () => requestSeq === loadRequestSeq
     if (!props.tableName) {
         rows.value = []
         total.value = 0
         fields.value = []
+        loading.value = false
         await nextTick()
-        setTableHeight()
+        if (isLatestRequest()) {
+            setTableHeight()
+        }
         return
     }
+    const requestTableName = props.tableName
+    const requestPage = page.value
+    const requestPageSize = pageSize.value
+    const requestFilters = appliedFilters.value
     loading.value = true
     try {
         const result = await props.loadData({
-            tableName: props.tableName,
-            page: page.value,
-            pageSize: pageSize.value,
-            filters: appliedFilters.value,
+            tableName: requestTableName,
+            page: requestPage,
+            pageSize: requestPageSize,
+            filters: requestFilters,
         })
+        if (!isLatestRequest()) {
+            return
+        }
         fields.value = result.fields || []
         total.value = result.total || 0
         rows.value = result.items || []
     } catch (error) {
+        if (!isLatestRequest()) {
+            return
+        }
         rows.value = []
         total.value = 0
         message.error(error instanceof Error ? error.message : '加载表格数据失败')
     } finally {
+        if (!isLatestRequest()) {
+            return
+        }
         loading.value = false
         await nextTick()
         setTableHeight()
@@ -377,10 +395,7 @@ defineExpose({
         class="wc-page-schema-table"
         :class="{ 'wc-page-schema-table--fill': fill }"
     >
-        <div
-            v-if="searchFields.length"
-            class="wc-page-schema-table__search"
-        >
+        <div class="wc-page-schema-table__search">
             <div class="wc-page-schema-table__search-fields">
                 <div
                     v-for="fieldItem in searchFields"
@@ -394,9 +409,26 @@ defineExpose({
                 </div>
             </div>
             <div class="wc-page-schema-table__search-actions">
-                <a-button type="primary" @click="handleSearch">查询</a-button>
-                <a-button @click="handleResetSearch">重置</a-button>
-                <a-button type="primary" @click="emit('create')">新增</a-button>
+                <a-button
+                    type="primary"
+                    :disabled="!tableName"
+                    @click="handleSearch"
+                >
+                    查询
+                </a-button>
+                <a-button
+                    :disabled="!tableName"
+                    @click="handleResetSearch"
+                >
+                    重置
+                </a-button>
+                <a-button
+                    type="primary"
+                    :disabled="!tableName"
+                    @click="emit('create')"
+                >
+                    新增
+                </a-button>
             </div>
         </div>
         <div ref="tableContentRef" class="wc-page-schema-table__body">
