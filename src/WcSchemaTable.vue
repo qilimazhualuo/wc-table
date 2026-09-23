@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, useSlots, watch } from 'vue'
 import type { FunctionalComponent, VNode } from 'vue'
 import { Button, DatePicker, Input, InputNumber, Popconfirm, Select, Space, SpaceCompact, message } from 'antdv-next'
 import type {
@@ -23,9 +23,12 @@ const props = withDefaults(defineProps<{
     tableName?: string | null
     loadData: PageTableLoadData
     fill?: boolean
+    /** 操作列宽度；有自定义 actions 插槽时可自行加大 */
+    actionColumnWidth?: number
 }>(), {
     tableName: null,
     fill: true,
+    actionColumnWidth: undefined,
 })
 
 const emit = defineEmits<{
@@ -33,6 +36,15 @@ const emit = defineEmits<{
     delete: [featureId: string, record: PageTableRow]
     create: []
 }>()
+
+const slots = useSlots()
+const hasCustomActions = computed(() => Boolean(slots.actions))
+const resolvedActionColumnWidth = computed(() => {
+    if (typeof props.actionColumnWidth === 'number' && props.actionColumnWidth > 0) {
+        return props.actionColumnWidth
+    }
+    return hasCustomActions.value ? 200 : 140
+})
 
 const tableContentRef = ref<HTMLElement | null>(null)
 const loading = ref(false)
@@ -235,7 +247,7 @@ const tableColumns = computed(() => {
         {
             key: 'action',
             title: '操作',
-            width: 140,
+            width: resolvedActionColumnWidth.value,
             align: 'center' as const,
             fixed: 'right' as const,
             render: (_value: unknown, record: PageTableRow) => (
@@ -247,6 +259,7 @@ const tableColumns = computed(() => {
                     >
                         编辑
                     </Button>
+                    {slots.actions?.({ featureId: record.id, record })}
                     <Popconfirm
                         title="确定删除这条数据？"
                         okText="确定"
