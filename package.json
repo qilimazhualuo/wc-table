@@ -6,7 +6,10 @@
     "main": "./src/index.ts",
     "module": "./src/index.ts",
     "types": "./src/index.ts",
-    "files": ["src", "dist"],
+    "files": [
+        "src",
+        "dist"
+    ],
     "exports": {
         ".": {
             "types": "./src/index.ts",
@@ -17,7 +20,10 @@
     "scripts": {
         "build": "vite build"
     },
-    "sideEffects": ["**/*.vue", "**/*.less"],
+    "sideEffects": [
+        "**/*.vue",
+        "**/*.less"
+    ],
     "peerDependencies": {
         "antdv-next": "^1.3.5",
         "vue": "^3.5.13"
